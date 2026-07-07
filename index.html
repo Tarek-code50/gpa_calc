@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPA & cGPA Calculator | حاسبة المعدل التراكمي</title>
+  <meta name="description" content="A modern, responsive GPA and Cumulative GPA calculator with grade mapping, target GPA predictor, dark mode, and PDF export. Built for credit-hour university grading systems. حاسبة المعدل الفصلي والتراكمي." />
+
+  <!-- Google Fonts: Inter (Latin) + Noto Kufi Arabic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS v3 CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- html2canvas + jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Kufi Arabic', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50:  '#eef5ff',
+              100: '#d9e8ff',
+              200: '#bcd7ff',
+              300: '#8ec0ff',
+              400: '#599fff',
+              500: '#3478ff',
+              600: '#1b56f5',
+              700: '#1542e1',
+              800: '#1836b6',
+              900: '#1a338f',
+              950: '#142057',
+            },
+            accent: {
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+            },
+            surface: {
+              light: '#f8fafc',
+              dark: '#0f172a',
+            }
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.4s ease-out',
+            'slide-up': 'slideUp 0.4s ease-out',
+            'slide-down': 'slideDown 0.35s ease-out',
+            'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+            'pop': 'pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            slideDown: {
+              '0%': { opacity: '0', transform: 'translateY(-10px) scale(0.98)' },
+              '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+            },
+            pulseSoft: {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '0.7' },
+            },
+            pop: {
+              '0%': { transform: 'scale(0.95)', opacity: '0.7' },
+              '100%': { transform: 'scale(1)', opacity: '1' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ── Base & Utility Styles ── */
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', 'Noto Kufi Arabic', system-ui, sans-serif;
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+    /* Arabic font priority when RTL */
+    html[dir="rtl"] body {
+      font-family: 'Noto Kufi Arabic', 'Inter', system-ui, sans-serif;
+    }
+
+    /* ── Glassmorphism Card ── */
+    .glass {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+    .dark .glass {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    /* ── Custom Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 99px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+    /* ── Dark Mode Toggle Switch ── */
+    .toggle-track {
+      width: 52px; height: 28px;
+      border-radius: 99px;
+      background: linear-gradient(135deg, #cbd5e1, #e2e8f0);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      flex-shrink: 0;
+    }
+    .dark .toggle-track {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+    .toggle-thumb {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      top: 3px; left: 3px;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .dark .toggle-thumb {
+      transform: translateX(24px);
+    }
+    /* RTL: flip the dark toggle direction */
+    html[dir="rtl"] .toggle-thumb {
+      left: auto; right: 3px;
+    }
+    html[dir="rtl"] .dark .toggle-thumb {
+      transform: translateX(-24px);
+    }
+
+    /* ── Gradient mesh background ── */
+    .bg-mesh {
+      position: fixed; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(52, 120, 255, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(139, 92, 246, 0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(244, 114, 182, 0.06) 0%, transparent 60%);
+    }
+    .dark .bg-mesh {
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(52, 120, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(244, 114, 182, 0.03) 0%, transparent 60%);
+    }
+
+    /* ── Input Styles ── */
+    .input-field {
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-field:focus {
+      border-color: #3478ff;
+      box-shadow: 0 0 0 3px rgba(52, 120, 255, 0.15);
+    }
+    .dark .input-field:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    }
+
+    /* ── GPA Ring ── */
+    .gpa-ring {
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        #3478ff var(--progress),
+        #e2e8f0 var(--progress)
+      );
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      transition: --progress 0.6s ease;
+    }
+    .dark .gpa-ring {
+      background: conic-gradient(
+        from 0deg,
+        #8b5cf6 var(--progress),
+        #1e293b var(--progress)
+      );
+    }
+    .gpa-ring-inner {
+      width: 130px; height: 130px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+    }
+
+    /* ── Row Animation ── */
+    .course-row {
+      animation: slideDown 0.35s ease-out;
+    }
+    .course-row.removing {
+      animation: fadeOut 0.25s ease-in forwards;
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateY(-10px) scale(0.98); }
+    }
+
+    /* ── Print / Export Styles ── */
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      .glass { background: white !important; border: 1px solid #e2e8f0 !important; backdrop-filter: none !important; }
+    }
+
+    /* ── Mode switch pill ── */
+    .mode-pill {
+      position: relative;
+      display: inline-flex;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .mode-pill-btn {
+      padding: 4px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      z-index: 1;
+      position: relative;
+      border: none;
+      background: transparent;
+    }
+    .mode-pill-btn.active {
+      color: white;
+    }
+    .mode-pill-slider {
+      position: absolute;
+      top: 2px; bottom: 2px;
+      border-radius: 9999px;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.3s ease;
+      z-index: 0;
+    }
+
+    /* ── Tooltip ── */
+    [data-tooltip] {
+      position: relative;
+    }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%; left: 50%;
+      transform: translateX(-50%) translateY(-4px);
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    [data-tooltip]:hover::after { opacity: 1; }
+
+    /* ── Language Switcher ── */
+    .lang-btn {
+      padding: 5px 12px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      border: 1.5px solid transparent;
+    }
+    .lang-btn.active {
+      border-color: currentColor;
+    }
+
+    /* ── RTL Adjustments ── */
+    html[dir="rtl"] .mode-pill-slider {
+      /* Slider positioning handled via JS for RTL */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-surface-light dark:bg-surface-dark text-slate-800 dark:text-slate-200 antialiased">
+  <!-- Background mesh -->
+  <div class="bg-mesh"></div>
+
+  <!-- ═══════════════════════════════════════════════ NAVBAR ═══════════════════════════════════════════════ -->
+  <nav id="navbar" class="sticky top-0 z-50 glass border-b border-white/20 dark:border-slate-700/30 no-print">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shadow-lg shadow-brand-500/25">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.905 59.905 0 0 1 12 3.493a59.902 59.902 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
+          </svg>
+        </div>
+        <h1 class="text-lg sm:text-xl font-bold tracking-tight">
+          <span class="bg-gradient-to-r from-brand-600 to-accent-500 dark:from-brand-400 dark:to-accent-400 bg-clip-text text-transparent">GPA</span>
+          <span class="text-slate-500 dark:text-slate-400 font-normal mx-0.5" data-i18n="logoCalc">Calc</span>
+        </h1>
+      </div>
+
+      <!-- Right controls: Language + Dark mode -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Language Switcher -->
+        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 rounded-xl p-0.5">
+          <button id="langEnBtn" class="lang-btn active text-brand-600 dark:text-brand-400" data-lang="en" aria-label="English">EN</button>
+          <button id="langArBtn" class="lang-btn text-slate-500 dark:text-slate-400" data-lang="ar" aria-label="العربية">ع</button>
+        </div>
+
+        <!-- Dark mode toggle -->
+        <span class="text-xs font-medium text-slate-500 dark:text-slate-400 hidden sm:inline">
+          <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+          </svg>
+        </span>
+        <div id="darkToggle" class="toggle-track" role="switch" aria-checked="false" aria-label="Toggle dark mode" tabindex="0">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span class="text-xs font-medium text-slate-500 dark:text-slate-400 hidden sm:inline">
+          <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+          </svg>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════ MAIN CONTENT ═══════════════════════════════════════ -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+    <!-- ────────── Hero Banner ────────── -->
+    <section class="text-center animate-fade-in mb-2">
+      <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+        <span class="bg-gradient-to-r from-brand-600 via-accent-500 to-pink-500 dark:from-brand-400 dark:via-accent-400 dark:to-pink-400 bg-clip-text text-transparent" data-i18n="heroTitle">
+          GPA &amp; cGPA Calculator
+        </span>
+      </h2>
+      <p class="mt-2 text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-xl mx-auto" data-i18n="heroSubtitle">
+        Instantly calculate your semester GPA, cumulative GPA, and plan your path to your target grade — all in one place.
+      </p>
+    </section>
+
+    <!-- ────────── Grade Reference (collapsible) ────────── -->
+    <section class="no-print">
+      <button id="gradeRefToggle" class="w-full glass rounded-2xl px-5 py-3.5 flex items-center justify-between hover:shadow-md transition-shadow group">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </div>
+          <span class="font-semibold text-sm" data-i18n="gradeRefTitle">Grade Reference Table</span>
+        </div>
+        <svg id="gradeRefChevron" class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+      <div id="gradeRefPanel" class="hidden mt-2 animate-slide-down">
+        <div class="glass rounded-2xl p-4 sm:p-6 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th class="pb-3 pr-4" data-i18n="thGrade">Grade</th>
+                <th class="pb-3 pr-4" data-i18n="thRange">Percentage Range</th>
+                <th class="pb-3" data-i18n="thPoints">Quality Points</th>
+              </tr>
+            </thead>
+            <tbody id="gradeRefBody" class="divide-y divide-slate-200/60 dark:divide-slate-700/40">
+              <!-- Filled by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ SEMESTER GPA SECTION ══════════════════════════════ -->
+    <section id="semesterSection" class="glass rounded-3xl p-5 sm:p-8 shadow-xl shadow-brand-500/5 animate-slide-up">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h3 class="text-xl font-bold flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+              </svg>
+            </span>
+            <span data-i18n="semGpaTitle">Semester GPA</span>
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 ms-9" data-i18n="semGpaSubtitle">Add your courses below. GPA updates live.</p>
+        </div>
+        <button id="addCourseBtn" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 transition-all active:scale-95 no-print">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          <span data-i18n="addCourse">Add Course</span>
+        </button>
+      </div>
+
+      <!-- Course Rows Container -->
+      <div id="courseRows" class="space-y-3">
+        <!-- Rows injected by JS -->
+      </div>
+
+      <!-- ── Results Card ── -->
+      <div id="gpaResultCard" class="mt-8 rounded-2xl bg-gradient-to-br from-brand-500/10 via-accent-500/5 to-pink-500/5 dark:from-brand-500/15 dark:via-accent-500/10 dark:to-pink-500/5 border border-brand-200/40 dark:border-brand-700/30 p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 animate-pop">
+        <div class="gpa-ring shrink-0" style="--progress: 0%;">
+          <div class="gpa-ring-inner bg-white dark:bg-slate-800 rounded-full shadow-inner">
+            <span id="gpaValue" class="text-3xl font-extrabold bg-gradient-to-br from-brand-600 to-accent-500 dark:from-brand-400 dark:to-accent-400 bg-clip-text text-transparent">0.00</span>
+            <span class="text-[0.65rem] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5" data-i18n="semGpaLabel">Semester GPA</span>
+          </div>
+        </div>
+        <div class="text-center sm:text-start flex-1 space-y-2">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="rounded-xl bg-white/60 dark:bg-slate-700/40 p-3">
+              <p class="text-[0.65rem] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold" data-i18n="totalCredits">Total Credits</p>
+              <p id="totalCredits" class="text-lg font-bold mt-0.5">0</p>
+            </div>
+            <div class="rounded-xl bg-white/60 dark:bg-slate-700/40 p-3">
+              <p class="text-[0.65rem] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold" data-i18n="qualityPoints">Quality Points</p>
+              <p id="totalPoints" class="text-lg font-bold mt-0.5">0.00</p>
+            </div>
+            <div class="rounded-xl bg-white/60 dark:bg-slate-700/40 p-3">
+              <p class="text-[0.65rem] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold" data-i18n="courses">Courses</p>
+              <p id="courseCount" class="text-lg font-bold mt-0.5">0</p>
+            </div>
+            <div class="rounded-xl bg-white/60 dark:bg-slate-700/40 p-3">
+              <p class="text-[0.65rem] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold" data-i18n="classification">Classification</p>
+              <p id="classification" class="text-lg font-bold mt-0.5 text-brand-600 dark:text-brand-400">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ CUMULATIVE GPA SECTION ══════════════════════════════ -->
+    <section class="glass rounded-3xl p-5 sm:p-8 shadow-xl shadow-accent-500/5 animate-slide-up">
+      <button id="cgpaToggle" class="w-full flex items-center justify-between">
+        <h3 class="text-xl font-bold flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-500 to-pink-500 flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+            </svg>
+          </span>
+          <span data-i18n="cgpaTitle">Cumulative GPA (cGPA)</span>
+        </h3>
+        <svg id="cgpaChevron" class="w-5 h-5 text-slate-400 transition-transform duration-300 no-print" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      <div id="cgpaPanel" class="hidden mt-6 animate-slide-down space-y-5">
+        <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="cgpaDesc">Enter your prior academic record to combine with the current semester.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="prevGPA" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5" data-i18n="prevGpaLabel">Previous Cumulative GPA</label>
+            <input id="prevGPA" type="number" step="0.01" min="0" max="4" data-i18n-placeholder="prevGpaPlaceholder" placeholder="e.g. 3.25"
+              class="input-field w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm font-medium outline-none" />
+          </div>
+          <div>
+            <label for="prevHours" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5" data-i18n="prevHoursLabel">Previous Completed Credit Hours</label>
+            <input id="prevHours" type="number" step="1" min="0" data-i18n-placeholder="prevHoursPlaceholder" placeholder="e.g. 90"
+              class="input-field w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm font-medium outline-none" />
+          </div>
+        </div>
+
+        <!-- cGPA Result -->
+        <div class="rounded-2xl bg-gradient-to-br from-accent-500/10 to-pink-500/5 dark:from-accent-500/15 dark:to-pink-500/10 border border-accent-200/40 dark:border-accent-700/30 p-5 flex items-center gap-5">
+          <div class="w-20 h-20 rounded-full bg-gradient-to-br from-accent-500 to-pink-500 flex items-center justify-center shadow-lg shadow-accent-500/30 shrink-0">
+            <span id="cgpaValue" class="text-2xl font-extrabold text-white">—</span>
+          </div>
+          <div>
+            <p class="text-[0.65rem] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-semibold" data-i18n="cgpaLabel">Cumulative GPA</p>
+            <p id="cgpaDetail" class="text-xs text-slate-500 dark:text-slate-400 mt-1" data-i18n="cgpaDefaultDetail">Enter your previous GPA and hours to compute.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ TARGET GPA PREDICTOR ══════════════════════════════ -->
+    <section class="glass rounded-3xl p-5 sm:p-8 shadow-xl shadow-emerald-500/5 animate-slide-up">
+      <button id="targetToggle" class="w-full flex items-center justify-between">
+        <h3 class="text-xl font-bold flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.841m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+            </svg>
+          </span>
+          <span data-i18n="targetTitle">Target GPA Predictor</span>
+        </h3>
+        <svg id="targetChevron" class="w-5 h-5 text-slate-400 transition-transform duration-300 no-print" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      <div id="targetPanel" class="hidden mt-6 animate-slide-down space-y-5">
+        <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="targetDesc">Find out what GPA you need to maintain in the remaining semesters to hit your target.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="targetGPA" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5" data-i18n="targetGpaLabel">Target cGPA</label>
+            <input id="targetGPA" type="number" step="0.01" min="0" max="4" data-i18n-placeholder="targetGpaPlaceholder" placeholder="e.g. 3.50"
+              class="input-field w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm font-medium outline-none" />
+          </div>
+          <div>
+            <label for="remainHours" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5" data-i18n="remainHoursLabel">Remaining Credit Hours</label>
+            <input id="remainHours" type="number" step="1" min="0" data-i18n-placeholder="remainHoursPlaceholder" placeholder="e.g. 30"
+              class="input-field w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm font-medium outline-none" />
+          </div>
+        </div>
+
+        <!-- Target Result -->
+        <div id="targetResultCard" class="rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 dark:from-emerald-500/15 dark:to-teal-500/10 border border-emerald-200/40 dark:border-emerald-700/30 p-5">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 shrink-0 mt-0.5">
+              <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+            </div>
+            <div>
+              <p id="targetMessage" class="text-sm font-semibold text-slate-700 dark:text-slate-200" data-i18n="targetDefault">Enter your target GPA and remaining hours to get a prediction.</p>
+              <p id="targetDetail" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ EXPORT BUTTONS ══════════════════════════════ -->
+    <div class="flex justify-center gap-3 no-print pb-8">
+      <button id="exportPDFBtn" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold text-white bg-gradient-to-r from-brand-500 via-accent-500 to-pink-500 hover:opacity-90 shadow-xl shadow-brand-500/20 transition-all active:scale-95">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        <span data-i18n="exportPdf">Export Report as PDF</span>
+      </button>
+      <button id="printBtn" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all active:scale-95">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12Zm-12 0h.008v.008H6.75V12Z" />
+        </svg>
+        <span data-i18n="printBtn">Print</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer class="text-center py-6 text-xs text-slate-400 dark:text-slate-600 no-print">
+    <p><span data-i18n="footer">Built with precision · GPA Calculator</span> &copy; <span id="footerYear"></span></p>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════ JAVASCRIPT ═══════════════════════════════════════════════ -->
+  <script>
+  (() => {
+    'use strict';
+
+    // ═══════════════════════════════════════════════
+    //  INTERNATIONALIZATION (i18n)
+    // ═══════════════════════════════════════════════
+    const TRANSLATIONS = {
+      en: {
+        // Navbar & Logo
+        logoCalc: 'Calc',
+        // Hero
+        heroTitle: 'GPA & cGPA Calculator',
+        heroSubtitle: 'Instantly calculate your semester GPA, cumulative GPA, and plan your path to your target grade — all in one place.',
+        // Grade reference
+        gradeRefTitle: 'Grade Reference Table',
+        thGrade: 'Grade',
+        thRange: 'Percentage Range',
+        thPoints: 'Quality Points',
+        // Semester GPA
+        semGpaTitle: 'Semester GPA',
+        semGpaSubtitle: 'Add your courses below. GPA updates live.',
+        addCourse: 'Add Course',
+        semGpaLabel: 'Semester GPA',
+        totalCredits: 'Total Credits',
+        qualityPoints: 'Quality Points',
+        courses: 'Courses',
+        classification: 'Classification',
+        // Course row labels
+        rowCourse: 'Course',
+        rowCoursePlaceholder: 'e.g. Calculus I',
+        rowCredits: 'Credits',
+        rowInputMode: 'Input Mode',
+        rowGradeBtn: 'Grade',
+        rowPctBtn: '%',
+        rowGrade: 'Grade',
+        rowGradeSelect: 'Select',
+        rowScorePct: 'Score %',
+        rowPoints: 'Points',
+        rowRemove: 'Remove',
+        // cGPA
+        cgpaTitle: 'Cumulative GPA (cGPA)',
+        cgpaDesc: 'Enter your prior academic record to combine with the current semester.',
+        prevGpaLabel: 'Previous Cumulative GPA',
+        prevGpaPlaceholder: 'e.g. 3.25',
+        prevHoursLabel: 'Previous Completed Credit Hours',
+        prevHoursPlaceholder: 'e.g. 90',
+        cgpaLabel: 'Cumulative GPA',
+        cgpaDefaultDetail: 'Enter your previous GPA and hours to compute.',
+        cgpaSemOnly: 'Showing current semester GPA only.',
+        cgpaCombined: (pts, hrs) => `Combined: ${pts} quality points over ${hrs} credit hours.`,
+        // Target
+        targetTitle: 'Target GPA Predictor',
+        targetDesc: 'Find out what GPA you need to maintain in the remaining semesters to hit your target.',
+        targetGpaLabel: 'Target cGPA',
+        targetGpaPlaceholder: 'e.g. 3.50',
+        remainHoursLabel: 'Remaining Credit Hours',
+        remainHoursPlaceholder: 'e.g. 30',
+        targetDefault: 'Enter your target GPA and remaining hours to get a prediction.',
+        targetNotAchievable: '⚠️ Not achievable with remaining hours.',
+        targetNotAchievableDetail: (gpa) => `You would need a ${gpa} GPA, which exceeds the maximum 4.00. Consider extending your remaining hours.`,
+        targetSurpassed: "🎉 You've already surpassed your target!",
+        targetSurpassedDetail: (gpa) => `Your current trajectory already exceeds a ${gpa} cGPA. Excellent work!`,
+        targetRequired: (gpa, hrs) => `You need an average of ${gpa} GPA in your remaining ${hrs} hours.`,
+        targetDiffHard: 'Challenging but possible!',
+        targetDiffMed: 'Very achievable — keep it up!',
+        targetDiffEasy: 'Easily reachable. Stay consistent!',
+        // Export
+        exportPdf: 'Export Report as PDF',
+        printBtn: 'Print',
+        generating: 'Generating...',
+        exportFail: 'Failed to generate PDF. Please try the Print option instead.',
+        // Footer
+        footer: 'Built with precision · GPA Calculator',
+        // Classifications
+        classDeansList: "Dean's List",
+        classHonors: 'Honors',
+        classGoodStanding: 'Good Standing',
+        classProbation: 'Probation',
+        classAtRisk: 'At Risk',
+        // Grade ref range helpers
+        rangeAbove: (pct) => `${pct}% and above`,
+        rangeLessThan: (pct) => `Less than ${pct}%`,
+        rangeBetween: (min, max) => `${min}% to less than ${max}%`,
+      },
+      ar: {
+        // Navbar & Logo
+        logoCalc: 'حاسبة',
+        // Hero
+        heroTitle: 'حاسبة المعدل الفصلي والتراكمي',
+        heroSubtitle: 'احسب معدلك الفصلي والتراكمي فوراً، وخطّط للوصول إلى معدلك المستهدف — كل شيء في مكان واحد.',
+        // Grade reference
+        gradeRefTitle: 'جدول مرجع الدرجات',
+        thGrade: 'الدرجة',
+        thRange: 'نطاق النسبة المئوية',
+        thPoints: 'نقاط الجودة',
+        // Semester GPA
+        semGpaTitle: 'المعدل الفصلي',
+        semGpaSubtitle: 'أضف موادك أدناه. يتم تحديث المعدل تلقائياً.',
+        addCourse: 'إضافة مادة',
+        semGpaLabel: 'المعدل الفصلي',
+        totalCredits: 'مجموع الساعات',
+        qualityPoints: 'نقاط الجودة',
+        courses: 'المواد',
+        classification: 'التصنيف',
+        // Course row labels
+        rowCourse: 'المادة',
+        rowCoursePlaceholder: 'مثال: حساب التفاضل',
+        rowCredits: 'الساعات',
+        rowInputMode: 'طريقة الإدخال',
+        rowGradeBtn: 'درجة',
+        rowPctBtn: '%',
+        rowGrade: 'الدرجة',
+        rowGradeSelect: 'اختر',
+        rowScorePct: 'النسبة %',
+        rowPoints: 'النقاط',
+        rowRemove: 'حذف',
+        // cGPA
+        cgpaTitle: 'المعدل التراكمي (cGPA)',
+        cgpaDesc: 'أدخل سجلك الأكاديمي السابق لدمجه مع الفصل الحالي.',
+        prevGpaLabel: 'المعدل التراكمي السابق',
+        prevGpaPlaceholder: 'مثال: 3.25',
+        prevHoursLabel: 'الساعات المعتمدة المكتملة سابقاً',
+        prevHoursPlaceholder: 'مثال: 90',
+        cgpaLabel: 'المعدل التراكمي',
+        cgpaDefaultDetail: 'أدخل معدلك السابق وساعاتك للحساب.',
+        cgpaSemOnly: 'يتم عرض معدل الفصل الحالي فقط.',
+        cgpaCombined: (pts, hrs) => `المجموع: ${pts} نقطة جودة على ${hrs} ساعة معتمدة.`,
+        // Target
+        targetTitle: 'التنبؤ بالمعدل المستهدف',
+        targetDesc: 'اكتشف المعدل الذي تحتاج للحفاظ عليه في الفصول المتبقية للوصول إلى هدفك.',
+        targetGpaLabel: 'المعدل التراكمي المستهدف',
+        targetGpaPlaceholder: 'مثال: 3.50',
+        remainHoursLabel: 'الساعات المتبقية',
+        remainHoursPlaceholder: 'مثال: 30',
+        targetDefault: 'أدخل المعدل المستهدف والساعات المتبقية للحصول على تنبؤ.',
+        targetNotAchievable: '⚠️ غير قابل للتحقيق بالساعات المتبقية.',
+        targetNotAchievableDetail: (gpa) => `ستحتاج معدل ${gpa}، وهو يتجاوز الحد الأقصى 4.00. فكّر في زيادة الساعات المتبقية.`,
+        targetSurpassed: '🎉 لقد تجاوزت هدفك بالفعل!',
+        targetSurpassedDetail: (gpa) => `مسارك الحالي يتجاوز بالفعل معدل ${gpa} تراكمي. عمل ممتاز!`,
+        targetRequired: (gpa, hrs) => `تحتاج معدل ${gpa} في ساعاتك المتبقية البالغة ${hrs} ساعة.`,
+        targetDiffHard: 'صعب لكن ممكن!',
+        targetDiffMed: 'قابل للتحقيق — واصل!',
+        targetDiffEasy: 'سهل الوصول. حافظ على ثباتك!',
+        // Export
+        exportPdf: 'تصدير التقرير كـ PDF',
+        printBtn: 'طباعة',
+        generating: 'جارٍ التصدير...',
+        exportFail: 'فشل إنشاء ملف PDF. جرّب خيار الطباعة بدلاً من ذلك.',
+        // Footer
+        footer: 'صُنعت بدقة · حاسبة المعدل',
+        // Classifications
+        classDeansList: 'قائمة العميد',
+        classHonors: 'مرتبة الشرف',
+        classGoodStanding: 'مقبول',
+        classProbation: 'إنذار أكاديمي',
+        classAtRisk: 'معرّض للفصل',
+        // Grade ref range helpers
+        rangeAbove: (pct) => `${pct}% فما فوق`,
+        rangeLessThan: (pct) => `أقل من ${pct}%`,
+        rangeBetween: (min, max) => `${min}% إلى أقل من ${max}%`,
+      }
+    };
+
+    let currentLang = 'en';
+
+    /** Get a translation string. For functions, pass args. */
+    function t(key, ...args) {
+      const val = TRANSLATIONS[currentLang][key] || TRANSLATIONS.en[key] || key;
+      if (typeof val === 'function') return val(...args);
+      return val;
+    }
+
+    /** Apply all static [data-i18n] translations on the page */
+    function applyStaticTranslations() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const text = t(key);
+        if (text) el.textContent = text;
+      });
+      // Placeholders
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        const text = t(key);
+        if (text) el.placeholder = text;
+      });
+    }
+
+    /** Apply translations to a single course row element */
+    function applyRowTranslations(rowEl) {
+      const labels = rowEl.querySelectorAll('[data-i18n-row]');
+      labels.forEach(el => {
+        const key = el.getAttribute('data-i18n-row');
+        el.textContent = t(key);
+      });
+      const placeholders = rowEl.querySelectorAll('[data-i18n-row-placeholder]');
+      placeholders.forEach(el => {
+        const key = el.getAttribute('data-i18n-row-placeholder');
+        el.placeholder = t(key);
+      });
+    }
+
+    // ═══════════════════════════════════════════════
+    //  GRADING SCHEMA
+    // ═══════════════════════════════════════════════
+    const GRADE_MAP = [
+      { grade: 'A+', min: 95, max: 100,   points: 4.00 },
+      { grade: 'A',  min: 90, max: 95,    points: 4.00 },
+      { grade: 'A-', min: 85, max: 90,    points: 3.70 },
+      { grade: 'B+', min: 80, max: 85,    points: 3.30 },
+      { grade: 'B',  min: 75, max: 80,    points: 3.00 },
+      { grade: 'B-', min: 71, max: 75,    points: 2.70 },
+      { grade: 'C+', min: 68, max: 71,    points: 2.30 },
+      { grade: 'C',  min: 65, max: 68,    points: 2.00 },
+      { grade: 'C-', min: 60, max: 65,    points: 1.70 },
+      { grade: 'D+', min: 55, max: 60,    points: 1.30 },
+      { grade: 'D',  min: 50, max: 55,    points: 1.00 },
+      { grade: 'F',  min: 0,  max: 50,    points: 0.00 },
+    ];
+
+    /**
+     * Look up quality points from a percentage score.
+     * Uses the half-open interval [min, max) with A+ being [95, 100].
+     */
+    function pointsFromPercent(pct) {
+      const p = parseFloat(pct);
+      if (isNaN(p) || p < 0) return null;
+      const clamped = Math.min(Math.max(p, 0), 100);
+      for (const g of GRADE_MAP) {
+        if (clamped >= g.min) return g;
+      }
+      return GRADE_MAP[GRADE_MAP.length - 1];
+    }
+
+    /** Look up from a grade letter */
+    function pointsFromGrade(letter) {
+      return GRADE_MAP.find(g => g.grade === letter) || null;
+    }
+
+    /** Classify GPA — returns a translation key */
+    function classifyGPA(gpa) {
+      if (gpa >= 3.70) return t('classDeansList');
+      if (gpa >= 3.00) return t('classHonors');
+      if (gpa >= 2.00) return t('classGoodStanding');
+      if (gpa >= 1.00) return t('classProbation');
+      return t('classAtRisk');
+    }
+
+    // ═══════════════════════════════════════════════
+    //  DOM REFERENCES & STATE
+    // ═══════════════════════════════════════════════
+    const $ = (sel) => document.querySelector(sel);
+    const courseRowsEl = $('#courseRows');
+    let rowIdCounter = 0;
+    let isSaving = false; // prevent redundant saves during batch operations
+
+    // ═══════════════════════════════════════════════
+    //  GRADE REFERENCE TABLE
+    // ═══════════════════════════════════════════════
+    function populateGradeRef() {
+      const tbody = $('#gradeRefBody');
+      tbody.innerHTML = ''; // Clear for re-render on lang change
+      const colors = [
+        'text-emerald-600 dark:text-emerald-400',
+        'text-emerald-600 dark:text-emerald-400',
+        'text-emerald-500 dark:text-emerald-400',
+        'text-blue-600 dark:text-blue-400',
+        'text-blue-500 dark:text-blue-400',
+        'text-blue-400 dark:text-blue-300',
+        'text-amber-600 dark:text-amber-400',
+        'text-amber-500 dark:text-amber-400',
+        'text-amber-400 dark:text-amber-300',
+        'text-orange-500 dark:text-orange-400',
+        'text-orange-400 dark:text-orange-300',
+        'text-red-500 dark:text-red-400',
+      ];
+      GRADE_MAP.forEach((g, i) => {
+        const tr = document.createElement('tr');
+        let rangeText;
+        if (g.grade === 'A+') {
+          rangeText = t('rangeAbove', g.min);
+        } else if (g.grade === 'F') {
+          rangeText = t('rangeLessThan', g.max);
+        } else {
+          rangeText = t('rangeBetween', g.min, g.max);
+        }
+        tr.innerHTML = `
+          <td class="py-2.5 pe-4 font-bold ${colors[i]}">${g.grade}</td>
+          <td class="py-2.5 pe-4 text-slate-600 dark:text-slate-300">${rangeText}</td>
+          <td class="py-2.5 font-semibold">${g.points.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ═══════════════════════════════════════════════
+    //  TOGGLE HELPERS
+    // ═══════════════════════════════════════════════
+    function setupToggle(btnId, panelId, chevronId) {
+      const btn = $(`#${btnId}`);
+      const panel = $(`#${panelId}`);
+      const chevron = $(`#${chevronId}`);
+      btn.addEventListener('click', () => {
+        const isOpen = !panel.classList.contains('hidden');
+        panel.classList.toggle('hidden');
+        chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+      });
+    }
+    setupToggle('gradeRefToggle', 'gradeRefPanel', 'gradeRefChevron');
+    setupToggle('cgpaToggle', 'cgpaPanel', 'cgpaChevron');
+    setupToggle('targetToggle', 'targetPanel', 'targetChevron');
+
+    // ═══════════════════════════════════════════════
+    //  DARK MODE
+    // ═══════════════════════════════════════════════
+    const darkToggle = $('#darkToggle');
+    function setDarkMode(on) {
+      document.documentElement.classList.toggle('dark', on);
+      darkToggle.setAttribute('aria-checked', on ? 'true' : 'false');
+      localStorage.setItem('gpa-dark', on ? '1' : '0');
+    }
+    // Initialize
+    const savedDark = localStorage.getItem('gpa-dark');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDarkMode(savedDark ? savedDark === '1' : prefersDark);
+
+    darkToggle.addEventListener('click', () => {
+      setDarkMode(!document.documentElement.classList.contains('dark'));
+    });
+    darkToggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setDarkMode(!document.documentElement.classList.contains('dark'));
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    //  CREATE COURSE ROW
+    // ═══════════════════════════════════════════════
+    function createCourseRow(data = {}) {
+      const id = rowIdCounter++;
+      const mode = data.mode || 'grade'; // 'grade' or 'percent'
+      const div = document.createElement('div');
+      div.className = 'course-row';
+      div.dataset.rowId = id;
+
+      const gradeOptions = GRADE_MAP.map(g =>
+        `<option value="${g.grade}" ${data.grade === g.grade ? 'selected' : ''}>${g.grade}</option>`
+      ).join('');
+
+      div.innerHTML = `
+        <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/40 bg-white/40 dark:bg-slate-800/30 p-4 hover:shadow-md transition-shadow">
+          <div class="grid grid-cols-12 gap-3 items-end">
+            <!-- Course Name -->
+            <div class="col-span-12 sm:col-span-3">
+              <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowCourse">${t('rowCourse')}</label>
+              <input type="text" data-i18n-row-placeholder="rowCoursePlaceholder" placeholder="${t('rowCoursePlaceholder')}" value="${data.name || ''}"
+                class="course-name input-field w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none" />
+            </div>
+
+            <!-- Credit Hours -->
+            <div class="col-span-4 sm:col-span-2">
+              <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowCredits">${t('rowCredits')}</label>
+              <select class="course-credits input-field w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none cursor-pointer">
+                ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${(data.credits || 3) == n ? 'selected' : ''}>${n}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Mode Toggle -->
+            <div class="col-span-8 sm:col-span-2">
+              <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowInputMode">${t('rowInputMode')}</label>
+              <div class="mode-pill bg-slate-100 dark:bg-slate-700 rounded-full p-0.5 flex">
+                <button type="button" class="mode-pill-btn mode-grade ${mode === 'grade' ? 'active text-white' : 'text-slate-500 dark:text-slate-400'}" data-mode="grade" data-i18n-row="rowGradeBtn">${t('rowGradeBtn')}</button>
+                <button type="button" class="mode-pill-btn mode-pct ${mode === 'percent' ? 'active text-white' : 'text-slate-500 dark:text-slate-400'}" data-mode="percent" data-i18n-row="rowPctBtn">${t('rowPctBtn')}</button>
+                <div class="mode-pill-slider bg-gradient-to-r from-brand-500 to-brand-600 dark:from-accent-500 dark:to-accent-600"
+                  style="width: 50%; ${mode === 'percent' ? 'transform: translateX(100%)' : 'transform: translateX(0)'}"></div>
+              </div>
+            </div>
+
+            <!-- Grade Input -->
+            <div class="col-span-6 sm:col-span-2 grade-input-wrap ${mode === 'percent' ? 'hidden' : ''}">
+              <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowGrade">${t('rowGrade')}</label>
+              <select class="course-grade input-field w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none cursor-pointer">
+                <option value="" data-i18n-row="rowGradeSelect">${t('rowGradeSelect')}</option>
+                ${gradeOptions}
+              </select>
+            </div>
+
+            <!-- Percentage Input -->
+            <div class="col-span-6 sm:col-span-2 pct-input-wrap ${mode === 'grade' ? 'hidden' : ''}">
+              <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowScorePct">${t('rowScorePct')}</label>
+              <input type="number" min="0" max="100" step="0.1" placeholder="83" value="${data.percent || ''}"
+                class="course-pct input-field w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none" />
+            </div>
+
+            <!-- Points Display -->
+            <div class="col-span-4 sm:col-span-2">
+              <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowPoints">${t('rowPoints')}</label>
+              <div class="flex items-center gap-2">
+                <span class="course-points-display text-lg font-bold text-brand-600 dark:text-brand-400">${data.pointsDisplay || '—'}</span>
+                <span class="course-mapped-grade text-xs font-semibold text-slate-400 dark:text-slate-500">${data.mappedGrade || ''}</span>
+              </div>
+            </div>
+
+            <!-- Delete -->
+            <div class="col-span-2 sm:col-span-1 flex items-end justify-end pb-0.5">
+              <button type="button" class="delete-row-btn p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors no-print" data-tooltip="${t('rowRemove')}">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // ── Bind events inside row ──
+      const gradeSelect = div.querySelector('.course-grade');
+      const pctInput = div.querySelector('.course-pct');
+      const gradeWrap = div.querySelector('.grade-input-wrap');
+      const pctWrap = div.querySelector('.pct-input-wrap');
+      const modeBtns = div.querySelectorAll('.mode-pill-btn');
+      const slider = div.querySelector('.mode-pill-slider');
+
+      // Mode switching
+      modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const m = btn.dataset.mode;
+          modeBtns.forEach(b => {
+            b.classList.toggle('active', b.dataset.mode === m);
+            b.classList.toggle('text-white', b.dataset.mode === m);
+            b.classList.toggle('text-slate-500', b.dataset.mode !== m);
+            b.classList.toggle('dark:text-slate-400', b.dataset.mode !== m);
+          });
+          // Handle slider direction for RTL
+          const isRtl = document.documentElement.dir === 'rtl';
+          if (m === 'percent') {
+            slider.style.transform = isRtl ? 'translateX(-100%)' : 'translateX(100%)';
+          } else {
+            slider.style.transform = 'translateX(0)';
+          }
+          gradeWrap.classList.toggle('hidden', m === 'percent');
+          pctWrap.classList.toggle('hidden', m === 'grade');
+          div.dataset.mode = m;
+          recalcRow(div);
+        });
+      });
+
+      // Grade dropdown change
+      gradeSelect.addEventListener('change', () => recalcRow(div));
+
+      // Percentage input — with validation
+      pctInput.addEventListener('input', () => {
+        let val = parseFloat(pctInput.value);
+        if (!isNaN(val)) {
+          if (val > 100) { pctInput.value = 100; }
+          if (val < 0) { pctInput.value = 0; }
+        }
+        recalcRow(div);
+      });
+
+      // Delete
+      div.querySelector('.delete-row-btn').addEventListener('click', () => {
+        div.classList.add('removing');
+        setTimeout(() => { div.remove(); recalcAll(); }, 250);
+      });
+
+      // Bind change events for live recalc on credits and name
+      div.querySelector('.course-credits').addEventListener('change', () => recalcAll());
+      div.querySelector('.course-name').addEventListener('input', () => { if (!isSaving) saveState(); });
+
+      div.dataset.mode = mode;
+      courseRowsEl.appendChild(div);
+      recalcRow(div);
+      return div;
+    }
+
+    /** Recalculate a single row's points display, then trigger full recalc */
+    function recalcRow(rowEl) {
+      const mode = rowEl.dataset.mode || 'grade';
+      const pointsSpan = rowEl.querySelector('.course-points-display');
+      const mappedSpan = rowEl.querySelector('.course-mapped-grade');
+      const gradeSelect = rowEl.querySelector('.course-grade');
+      const pctInput = rowEl.querySelector('.course-pct');
+
+      let result = null;
+      if (mode === 'grade') {
+        const grade = gradeSelect.value;
+        result = grade ? pointsFromGrade(grade) : null;
+      } else {
+        const pct = pctInput.value;
+        if (pct !== '' && !isNaN(parseFloat(pct))) {
+          result = pointsFromPercent(pct);
+        }
+      }
+
+      if (result) {
+        pointsSpan.textContent = result.points.toFixed(2);
+        mappedSpan.textContent = mode === 'percent' ? result.grade : '';
+        // Sync: if in percentage mode, also set the grade dropdown for data consistency
+        if (mode === 'percent') {
+          gradeSelect.value = result.grade;
+        }
+      } else {
+        pointsSpan.textContent = '—';
+        mappedSpan.textContent = '';
+      }
+
+      recalcAll();
+    }
+
+    // ═══════════════════════════════════════════════
+    //  FULL RECALCULATION
+    // ═══════════════════════════════════════════════
+    function recalcAll() {
+      const rows = courseRowsEl.querySelectorAll('.course-row');
+      let totalCredits = 0;
+      let totalWeightedPoints = 0;
+      let validCourses = 0;
+
+      rows.forEach(row => {
+        const credits = parseInt(row.querySelector('.course-credits').value) || 0;
+        const pointsText = row.querySelector('.course-points-display').textContent;
+        const points = parseFloat(pointsText);
+        if (!isNaN(points) && credits > 0) {
+          totalCredits += credits;
+          totalWeightedPoints += points * credits;
+          validCourses++;
+        }
+      });
+
+      const gpa = totalCredits > 0 ? totalWeightedPoints / totalCredits : 0;
+
+      // Update display
+      $('#gpaValue').textContent = gpa.toFixed(2);
+      $('#totalCredits').textContent = totalCredits;
+      $('#totalPoints').textContent = totalWeightedPoints.toFixed(2);
+      $('#courseCount').textContent = rows.length;
+      $('#classification').textContent = validCourses > 0 ? classifyGPA(gpa) : '—';
+
+      // GPA ring progress (4.0 = 100%)
+      const progress = Math.min((gpa / 4) * 100, 100);
+      document.querySelector('.gpa-ring').style.setProperty('--progress', `${progress}%`);
+
+      // Recalc cGPA and target
+      recalcCGPA(gpa, totalCredits, totalWeightedPoints);
+      recalcTarget(gpa, totalCredits, totalWeightedPoints);
+
+      // Save state (guarded against redundant saves during loadState)
+      if (!isSaving) saveState();
+    }
+
+    // ═══════════════════════════════════════════════
+    //  cGPA CALCULATION
+    // ═══════════════════════════════════════════════
+    function recalcCGPA(semGPA, semCredits, semPoints) {
+      const prevGPA = parseFloat($('#prevGPA').value);
+      const prevHours = parseFloat($('#prevHours').value);
+      const cgpaEl = $('#cgpaValue');
+      const detailEl = $('#cgpaDetail');
+
+      if (isNaN(prevGPA) || isNaN(prevHours) || prevHours <= 0) {
+        cgpaEl.textContent = semCredits > 0 ? semGPA.toFixed(2) : '—';
+        detailEl.textContent = semCredits > 0 ? t('cgpaSemOnly') : t('cgpaDefaultDetail');
+        return;
+      }
+
+      // Clamp prevGPA to valid range
+      const clampedPrevGPA = Math.min(Math.max(prevGPA, 0), 4);
+      const priorPoints = clampedPrevGPA * prevHours;
+      const totalAllPoints = priorPoints + semPoints;
+      const totalAllHours = prevHours + semCredits;
+      const cgpa = totalAllHours > 0 ? totalAllPoints / totalAllHours : 0;
+
+      cgpaEl.textContent = cgpa.toFixed(2);
+      detailEl.textContent = t('cgpaCombined', totalAllPoints.toFixed(1), totalAllHours);
+    }
+
+    // ═══════════════════════════════════════════════
+    //  TARGET GPA PREDICTOR
+    // ═══════════════════════════════════════════════
+    function recalcTarget(semGPA, semCredits, semPoints) {
+      const targetGPAVal = parseFloat($('#targetGPA').value);
+      const remainHours = parseFloat($('#remainHours').value);
+      const msgEl = $('#targetMessage');
+      const detailEl = $('#targetDetail');
+      const baseClasses = 'text-sm font-semibold';
+
+      if (isNaN(targetGPAVal) || isNaN(remainHours) || remainHours <= 0) {
+        msgEl.textContent = t('targetDefault');
+        msgEl.className = `${baseClasses} text-slate-700 dark:text-slate-200`;
+        detailEl.textContent = '';
+        return;
+      }
+
+      // Use cGPA data if available, otherwise just current semester
+      const prevGPA = parseFloat($('#prevGPA').value);
+      const prevHours = parseFloat($('#prevHours').value);
+
+      let completedPoints, completedHours;
+      if (!isNaN(prevGPA) && !isNaN(prevHours) && prevHours > 0) {
+        const clampedPrevGPA = Math.min(Math.max(prevGPA, 0), 4);
+        completedPoints = (clampedPrevGPA * prevHours) + semPoints;
+        completedHours = prevHours + semCredits;
+      } else {
+        completedPoints = semPoints;
+        completedHours = semCredits;
+      }
+
+      const totalNeeded = targetGPAVal * (completedHours + remainHours);
+      const pointsNeeded = totalNeeded - completedPoints;
+      const requiredGPA = pointsNeeded / remainHours;
+
+      if (requiredGPA > 4.0) {
+        msgEl.textContent = t('targetNotAchievable');
+        msgEl.className = `${baseClasses} text-red-600 dark:text-red-400`;
+        detailEl.textContent = t('targetNotAchievableDetail', requiredGPA.toFixed(2));
+      } else if (requiredGPA <= 0) {
+        msgEl.textContent = t('targetSurpassed');
+        msgEl.className = `${baseClasses} text-emerald-600 dark:text-emerald-400`;
+        detailEl.textContent = t('targetSurpassedDetail', targetGPAVal.toFixed(2));
+      } else {
+        msgEl.textContent = t('targetRequired', requiredGPA.toFixed(2), remainHours);
+        msgEl.className = `${baseClasses} text-slate-700 dark:text-slate-200`;
+        const difficulty = requiredGPA >= 3.7 ? t('targetDiffHard') : requiredGPA >= 3.0 ? t('targetDiffMed') : t('targetDiffEasy');
+        detailEl.textContent = difficulty;
+      }
+    }
+
+    // ═══════════════════════════════════════════════
+    //  EVENT BINDINGS
+    // ═══════════════════════════════════════════════
+    // Add course button
+    $('#addCourseBtn').addEventListener('click', () => createCourseRow());
+
+    // cGPA inputs
+    $('#prevGPA').addEventListener('input', () => recalcAll());
+    $('#prevHours').addEventListener('input', () => recalcAll());
+
+    // Target inputs
+    $('#targetGPA').addEventListener('input', () => recalcAll());
+    $('#remainHours').addEventListener('input', () => recalcAll());
+
+    // ═══════════════════════════════════════════════
+    //  LOCAL STORAGE
+    // ═══════════════════════════════════════════════
+    const STORAGE_KEY = 'gpa-calc-state';
+
+    function saveState() {
+      const rows = [];
+      courseRowsEl.querySelectorAll('.course-row').forEach(row => {
+        rows.push({
+          name: row.querySelector('.course-name').value,
+          credits: row.querySelector('.course-credits').value,
+          grade: row.querySelector('.course-grade').value,
+          percent: row.querySelector('.course-pct').value,
+          mode: row.dataset.mode || 'grade',
+          pointsDisplay: row.querySelector('.course-points-display').textContent,
+          mappedGrade: row.querySelector('.course-mapped-grade').textContent,
+        });
+      });
+
+      const state = {
+        rows,
+        prevGPA: $('#prevGPA').value,
+        prevHours: $('#prevHours').value,
+        targetGPA: $('#targetGPA').value,
+        remainHours: $('#remainHours').value,
+        cgpaOpen: !$('#cgpaPanel').classList.contains('hidden'),
+        targetOpen: !$('#targetPanel').classList.contains('hidden'),
+        lang: currentLang,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      isSaving = true; // Prevent redundant saves during initialization
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        // Default: add 3 empty rows
+        for (let i = 0; i < 3; i++) createCourseRow();
+        isSaving = false;
+        recalcAll();
+        return;
+      }
+      try {
+        const state = JSON.parse(raw);
+
+        // Restore language first
+        if (state.lang && TRANSLATIONS[state.lang]) {
+          setLanguage(state.lang, false); // false = don't re-render rows yet
+        }
+
+        if (state.rows && state.rows.length > 0) {
+          state.rows.forEach(r => createCourseRow(r));
+        } else {
+          for (let i = 0; i < 3; i++) createCourseRow();
+        }
+        if (state.prevGPA) $('#prevGPA').value = state.prevGPA;
+        if (state.prevHours) $('#prevHours').value = state.prevHours;
+        if (state.targetGPA) $('#targetGPA').value = state.targetGPA;
+        if (state.remainHours) $('#remainHours').value = state.remainHours;
+        // Open sections if they were open
+        if (state.cgpaOpen) {
+          $('#cgpaPanel').classList.remove('hidden');
+          $('#cgpaChevron').style.transform = 'rotate(180deg)';
+        }
+        if (state.targetOpen) {
+          $('#targetPanel').classList.remove('hidden');
+          $('#targetChevron').style.transform = 'rotate(180deg)';
+        }
+        isSaving = false;
+        recalcAll();
+      } catch (e) {
+        for (let i = 0; i < 3; i++) createCourseRow();
+        isSaving = false;
+        recalcAll();
+      }
+    }
+
+    // ═══════════════════════════════════════════════
+    //  LANGUAGE SWITCHING
+    // ═══════════════════════════════════════════════
+    function setLanguage(lang, reRenderRows = true) {
+      currentLang = lang;
+      const html = document.documentElement;
+
+      // Set direction and lang attribute
+      if (lang === 'ar') {
+        html.setAttribute('dir', 'rtl');
+        html.setAttribute('lang', 'ar');
+      } else {
+        html.setAttribute('dir', 'ltr');
+        html.setAttribute('lang', 'en');
+      }
+
+      // Update active button styles
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        const isActive = btn.dataset.lang === lang;
+        btn.classList.toggle('active', isActive);
+        btn.classList.toggle('text-brand-600', isActive);
+        btn.classList.toggle('dark:text-brand-400', isActive);
+        btn.classList.toggle('text-slate-500', !isActive);
+        btn.classList.toggle('dark:text-slate-400', !isActive);
+      });
+
+      // Apply static translations
+      applyStaticTranslations();
+
+      // Re-render grade reference table
+      populateGradeRef();
+
+      // Re-translate existing course rows
+      if (reRenderRows) {
+        courseRowsEl.querySelectorAll('.course-row').forEach(row => {
+          applyRowTranslations(row);
+          // Update delete tooltip
+          const deleteBtn = row.querySelector('.delete-row-btn');
+          if (deleteBtn) deleteBtn.setAttribute('data-tooltip', t('rowRemove'));
+          // Fix mode slider direction
+          const slider = row.querySelector('.mode-pill-slider');
+          const mode = row.dataset.mode;
+          if (slider) {
+            const isRtl = lang === 'ar';
+            if (mode === 'percent') {
+              slider.style.transform = isRtl ? 'translateX(-100%)' : 'translateX(100%)';
+            } else {
+              slider.style.transform = 'translateX(0)';
+            }
+          }
+        });
+      }
+
+      // Re-run calculations to update dynamic text (classifications, cGPA detail, target messages)
+      recalcAll();
+    }
+
+    // Language button click handlers
+    $('#langEnBtn').addEventListener('click', () => setLanguage('en'));
+    $('#langArBtn').addEventListener('click', () => setLanguage('ar'));
+
+    // ═══════════════════════════════════════════════
+    //  EXPORT PDF
+    // ═══════════════════════════════════════════════
+    $('#exportPDFBtn').addEventListener('click', async () => {
+      const btn = $('#exportPDFBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `
+        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        ${t('generating')}
+      `;
+      btn.disabled = true;
+
+      try {
+        // Hide no-print elements
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+
+        const mainEl = document.querySelector('main');
+        const canvas = await html2canvas(mainEl, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : '#f8fafc',
+          logging: false,
+        });
+
+        // Restore no-print elements
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+
+        const { jsPDF } = window.jspdf;
+        const imgData = canvas.toDataURL('image/png');
+        const pdfWidth = 210; // A4 width in mm
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+        });
+
+        // Split content across pages if it exceeds A4 height
+        const pageHeight = 297;
+        let heightLeft = pdfHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+          position -= pageHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pageHeight;
+        }
+
+        const fileName = currentLang === 'ar' ? 'تقرير_المعدل.pdf' : 'GPA_Report.pdf';
+        pdf.save(fileName);
+      } catch (err) {
+        console.error('PDF generation failed:', err);
+        alert(t('exportFail'));
+      }
+
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    });
+
+    // Print button
+    $('#printBtn').addEventListener('click', () => window.print());
+
+    // Footer year
+    $('#footerYear').textContent = new Date().getFullYear();
+
+    // ═══════════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════════
+    populateGradeRef(); // Initial render
+    loadState();
+  })();
+  </script>
+</body>
+</html>
