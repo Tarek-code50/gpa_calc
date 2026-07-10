@@ -156,9 +156,10 @@
       display: flex; align-items: center; justify-content: center; flex-direction: column;
     }
 
-    /* ══════════════════════ COURSE ROW ANIMATIONS ══════════════════════ */
-    .course-row { animation: slideDown 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    /* ══════════════════════ COURSE ROW ANIMATIONS & DRAG ══════════════════════ */
+    .course-row { animation: slideDown 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); transition: opacity 0.2s, transform 0.2s; }
     .course-row.removing { animation: rowRemove 0.3s ease-in forwards; }
+    .course-row.dragging { opacity: 0.3; transform: scale(0.97); border: 2px dashed #8b5cf6; }
     @keyframes slideDown {
       0% { opacity: 0; transform: translateY(-15px) scale(0.97); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -262,6 +263,15 @@
     .reset-btn:hover {
       transform: rotate(90deg);
       color: #ef4444;
+    }
+
+    /* ══════════════════════ MODAL POP ANIMATION ══════════════════════ */
+    .animate-pop {
+      animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes modalPop {
+      0% { opacity: 0; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1); }
     }
   </style>
 </head>
@@ -426,7 +436,7 @@
       <button id="cgpaToggle" class="w-full flex items-center justify-between">
         <h3 class="text-xl font-bold flex items-center gap-2">
           <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-500 to-pink-500 flex items-center justify-center">
-            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h-2.25c-.621 0-1.125.504-1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
           </span>
           <span data-i18n="cgpaTitle">Cumulative GPA (cGPA)</span>
         </h3>
@@ -494,10 +504,14 @@
     </section>
 
     <!-- ══════════════════════ EXPORT BUTTONS ══════════════════════ -->
-    <div class="flex justify-center gap-3 no-print pb-4 reveal" style="transition-delay: 0.5s;">
+    <div class="flex flex-wrap justify-center gap-3 no-print pb-4 reveal" style="transition-delay: 0.5s;">
       <button id="exportPDFBtn" class="glow-btn inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold text-white bg-gradient-to-r from-brand-500 via-accent-500 to-pink-500 hover:opacity-90 shadow-xl shadow-brand-500/20 transition-all active:scale-95">
         <svg class="w-5 h-5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
         <span class="relative z-10" data-i18n="exportPdf">Export Report as PDF</span>
+      </button>
+      <button id="shareCardBtn" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all active:scale-95">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 10.742 13.884 7.64a3 3 0 1 0-1.428-2.43l-5.2 3.12a3 3 0 1 0 0 5.34l5.2 3.12A3 3 0 1 0 13.884 19.3l-5.2-3.12a3 3 0 1 0-1.428-2.431" /></svg>
+        <span data-i18n="shareBtn">Share &amp; QR</span>
       </button>
       <button id="printBtn" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all active:scale-95">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12Zm-12 0h.008v.008H6.75V12Z" /></svg>
@@ -505,6 +519,48 @@
       </button>
     </div>
   </main>
+
+  <!-- ═══════════════════════ SHARE & QR MODAL ═══════════════════════ -->
+  <div id="shareModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden no-print">
+    <div class="glass rounded-3xl max-w-md w-full p-6 shadow-2xl relative border border-white/20 dark:border-slate-700/30 animate-pop">
+      <!-- Close Button -->
+      <button id="closeShareModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
+
+      <h3 class="text-lg font-bold mb-4 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent" data-i18n="shareModalTitle">Share Your Results</h3>
+
+      <!-- Share Card Preview -->
+      <div id="shareCardPreview" class="rounded-2xl bg-gradient-to-br from-brand-500 via-accent-500 to-pink-500 p-0.5 shadow-lg overflow-hidden mb-5">
+        <div class="bg-white dark:bg-slate-900 p-6 rounded-[14px] text-center space-y-4">
+          <div class="inline-flex w-12 h-12 rounded-xl bg-brand-500/10 text-brand-500 items-center justify-center font-bold">GPA</div>
+          <div>
+            <h4 class="text-4xl font-extrabold text-slate-800 dark:text-slate-100" id="shareGPAVal">0.00</h4>
+            <p class="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1" id="shareClassVal">—</p>
+          </div>
+          <!-- QR Code Image -->
+          <div class="flex justify-center py-2">
+            <div class="p-2 bg-white rounded-xl border border-slate-100 shadow-inner">
+              <img id="shareQRCode" src="" alt="QR Code" class="w-32 h-32" />
+            </div>
+          </div>
+          <p class="text-[0.65rem] text-slate-400 dark:text-slate-500" data-i18n="scanToVerify">Scan QR Code to view or verify this score.</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="grid grid-cols-2 gap-3">
+        <button id="downloadShareCardBtn" class="glow-btn px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 hover:opacity-90 shadow-lg shadow-brand-500/25 flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+          <span data-i18n="downloadImg">Save Image</span>
+        </button>
+        <button id="copyShareLinkBtn" class="px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center justify-center gap-1.5 transition-all">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+          <span id="copyLinkText" data-i18n="copyLink">Copy Link</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══════════════════════ FOOTER WITH SIGNATURE ═══════════════════════ -->
   <footer class="text-center py-8 no-print reveal" style="transition-delay: 0.6s;">
@@ -703,10 +759,12 @@
         generating: 'Generating...', exportFail: 'Failed to generate PDF. Please try the Print option instead.',
         signatureName: 'Tarek Ibrahim',
         footer: 'Built with precision · GPA Calculator',
-        classExcellent: 'Excellent', classVeryGood: 'Very Good', classGood: 'Good', classPass: 'Pass', classPoorFail: 'Poor / Fail',
+        classExcellent: '🏆 Excellent', classVeryGood: '⭐ Very Good', classGood: '👍 Good', classPass: '⚠️ Pass', classPoorFail: '❌ Poor / Fail',
         rangeAbove: (pct) => `${pct}% and above`, rangeLessThan: (pct) => `Less than ${pct}%`, rangeBetween: (min, max) => `${min}% to less than ${max}%`,
         resetAll: 'Reset All', confirmReset: 'Are you sure you want to reset all data?',
-        confirmResetAr: 'Are you sure you want to reset all data?',
+        shareBtn: 'Share & QR', shareModalTitle: 'Share Your Results',
+        scanToVerify: 'Scan QR code to view or verify this score.',
+        downloadImg: 'Save Image', copyLink: 'Copy Link', linkCopied: 'Link copied to clipboard!',
       },
       ar: {
         logoCalc: 'حاسبة',
@@ -747,9 +805,12 @@
         generating: 'جارٍ التصدير...', exportFail: 'فشل إنشاء ملف PDF. جرّب خيار الطباعة بدلاً من ذلك.',
         signatureName: 'طارق ابراهيم',
         footer: 'صُنعت بدقة · حاسبة المعدل',
-        classExcellent: 'امتياز', classVeryGood: 'جيد جداً', classGood: 'جيد', classPass: 'مقبول', classPoorFail: 'ضعيف / راسب',
+        classExcellent: '🏆 امتياز', classVeryGood: '⭐ جيد جداً', classGood: '👍 جيد', classPass: '⚠️ مقبول', classPoorFail: '❌ ضعيف / راسب',
         rangeAbove: (pct) => `${pct}% فما فوق`, rangeLessThan: (pct) => `أقل من ${pct}%`, rangeBetween: (min, max) => `${min}% إلى أقل من ${max}%`,
         resetAll: 'إعادة تعيين', confirmReset: 'هل أنت متأكد من إعادة تعيين جميع البيانات؟',
+        shareBtn: 'مشاركة و QR', shareModalTitle: 'مشاركة النتائج',
+        scanToVerify: 'امسح رمز الـ QR لعرض أو التحقق من النتيجة.',
+        downloadImg: 'حفظ كصورة', copyLink: 'نسخ الرابط', linkCopied: 'تم نسخ الرابط إلى الحافظة!',
       }
     };
 
@@ -802,13 +863,12 @@
       return t('classPoorFail');
     }
 
-    /** Get ring color based on GPA standing */
     function getRingColor(gpa) {
-      if (gpa >= 3.60) return '#10b981'; // emerald
-      if (gpa >= 3.00) return '#3478ff'; // brand blue
-      if (gpa >= 2.40) return '#f59e0b'; // amber
-      if (gpa >= 2.00) return '#f97316'; // orange
-      return '#ef4444'; // red
+      if (gpa >= 3.60) return '#10b981';
+      if (gpa >= 3.00) return '#3478ff';
+      if (gpa >= 2.40) return '#f59e0b';
+      if (gpa >= 2.00) return '#f97316';
+      return '#ef4444';
     }
 
     // ═══════════════════════════════════════════════
@@ -878,7 +938,7 @@
     darkToggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDarkMode(!document.documentElement.classList.contains('dark')); } });
 
     // ═══════════════════════════════════════════════
-    //  CREATE COURSE ROW
+    //  CREATE COURSE ROW (WITH DRAG & DROP)
     // ═══════════════════════════════════════════════
     function createCourseRow(data = {}) {
       const id = rowIdCounter++;
@@ -891,13 +951,17 @@
       div.innerHTML = `
         <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/40 bg-white/40 dark:bg-slate-800/30 p-4 hover:shadow-lg hover:border-brand-200/60 dark:hover:border-brand-700/40 transition-all">
           <div class="grid grid-cols-12 gap-3 items-end">
-            <div class="col-span-12 sm:col-span-3">
+            <!-- Drag Handle -->
+            <div class="col-span-1 flex items-center justify-center pb-2 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 no-print drag-handle" title="Drag to reorder">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm6-12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
+            </div>
+            <div class="col-span-11 sm:col-span-3">
               <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowCourse">${t('rowCourse')}</label>
               <input type="text" data-i18n-row-placeholder="rowCoursePlaceholder" placeholder="${t('rowCoursePlaceholder')}" value="${data.name || ''}" class="course-name input-field w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none" />
             </div>
-            <div class="col-span-4 sm:col-span-2">
+            <div class="col-span-4 sm:col-span-1">
               <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowCredits">${t('rowCredits')}</label>
-              <select class="course-credits input-field w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none cursor-pointer">
+              <select class="course-credits input-field w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none cursor-pointer">
                 ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${(data.credits || 3) == n ? 'selected' : ''}>${n}</option>`).join('')}
               </select>
             </div>
@@ -919,14 +983,14 @@
               <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowScorePct">${t('rowScorePct')}</label>
               <input type="number" min="0" max="100" step="0.1" placeholder="83" value="${data.percent || ''}" class="course-pct input-field w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 text-sm outline-none" />
             </div>
-            <div class="col-span-4 sm:col-span-2">
+            <div class="col-span-8 sm:col-span-2">
               <label class="block text-[0.65rem] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1" data-i18n-row="rowPoints">${t('rowPoints')}</label>
               <div class="flex items-center gap-2">
                 <span class="course-points-display text-lg font-bold text-brand-600 dark:text-brand-400 counter-animate">${data.pointsDisplay || '—'}</span>
                 <span class="course-mapped-grade text-xs font-semibold text-slate-400 dark:text-slate-500">${data.mappedGrade || ''}</span>
               </div>
             </div>
-            <div class="col-span-2 sm:col-span-1 flex items-end justify-end pb-0.5">
+            <div class="col-span-4 sm:col-span-1 flex items-end justify-end pb-0.5">
               <button type="button" class="delete-row-btn p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all hover:rotate-12 no-print" data-tooltip="${t('rowRemove')}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
               </button>
@@ -940,6 +1004,24 @@
       const pctWrap = div.querySelector('.pct-input-wrap');
       const modeBtns = div.querySelectorAll('.mode-pill-btn');
       const slider = div.querySelector('.mode-pill-slider');
+
+      // Drag & Drop event bindings
+      div.setAttribute('draggable', 'true');
+      div.addEventListener('dragstart', (e) => {
+        if (!e.target.closest('.drag-handle')) { e.preventDefault(); return; }
+        e.dataTransfer.setData('text/plain', id);
+        div.classList.add('dragging');
+      });
+      div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
+      div.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const draggingRow = courseRowsEl.querySelector('.dragging');
+        if (!draggingRow || draggingRow === div) return;
+        const rect = div.getBoundingClientRect();
+        const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+        courseRowsEl.insertBefore(draggingRow, next ? div.nextSibling : div);
+      });
+      div.addEventListener('drop', (e) => { e.preventDefault(); recalcAll(); });
 
       modeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -996,7 +1078,6 @@
         pointsSpan.textContent = result.points.toFixed(2);
         mappedSpan.textContent = mode === 'percent' ? result.grade : '';
         if (mode === 'percent') gradeSelect.value = result.grade;
-        // Bump animation
         pointsSpan.classList.add('bump');
         setTimeout(() => pointsSpan.classList.remove('bump'), 300);
       } else {
@@ -1020,7 +1101,6 @@
 
       const gpa = totalCredits > 0 ? totalWeightedPoints / totalCredits : 0;
 
-      // Update display with bump animation
       const gpaEl = $('#gpaValue');
       const prevGpaText = gpaEl.textContent;
       const newGpaText = gpa.toFixed(2);
@@ -1032,14 +1112,12 @@
       $('#courseCount').textContent = rows.length;
       $('#classification').textContent = validCourses > 0 ? classifyGPA(gpa) : '—';
 
-      // GPA ring with dynamic color
       const progress = Math.min((gpa / 4) * 100, 100);
       const ringColor = validCourses > 0 ? getRingColor(gpa) : (document.documentElement.classList.contains('dark') ? '#8b5cf6' : '#3478ff');
       const ring = document.querySelector('.gpa-ring');
       ring.style.setProperty('--progress', `${progress}%`);
       ring.style.setProperty('--ring-color', ringColor);
 
-      // Confetti on excellent GPA (3.60+) — only fire once per session until GPA drops
       if (validCourses > 0 && gpa >= 3.60 && !confettiTriggered) {
         confettiTriggered = true;
         launchConfetti();
@@ -1062,11 +1140,8 @@
       const cgpaEl = $('#cgpaValue');
       const detailEl = $('#cgpaDetail');
 
-      // Validate prevGPA range
       if (!isNaN(prevGPA) && (prevGPA < 0 || prevGPA > 4)) {
-        const input = $('#prevGPA');
-        input.classList.add('input-error');
-        setTimeout(() => input.classList.remove('input-error'), 500);
+        const input = $('#prevGPA'); input.classList.add('input-error'); setTimeout(() => input.classList.remove('input-error'), 500);
       }
 
       if (isNaN(prevGPA) || isNaN(prevHours) || prevHours <= 0) {
@@ -1109,8 +1184,7 @@
         completedPoints = (Math.min(Math.max(prevGPA, 0), 4) * prevHours) + semPoints;
         completedHours = prevHours + semCredits;
       } else {
-        completedPoints = semPoints;
-        completedHours = semCredits;
+        completedPoints = semPoints; completedHours = semCredits;
       }
 
       const totalNeeded = targetGPAVal * (completedHours + remainHours);
@@ -1133,7 +1207,7 @@
     }
 
     // ═══════════════════════════════════════════════
-    //  EVENT BINDINGS
+    //  EVENT BINDINGS & RESET
     // ═══════════════════════════════════════════════
     $('#addCourseBtn').addEventListener('click', () => createCourseRow());
     $('#prevGPA').addEventListener('input', () => recalcAll());
@@ -1141,20 +1215,15 @@
     $('#targetGPA').addEventListener('input', () => recalcAll());
     $('#remainHours').addEventListener('input', () => recalcAll());
 
-    // Keyboard shortcut: Ctrl+Enter = add course
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); createCourseRow(); }
     });
 
-    // Reset All
     $('#resetAllBtn').addEventListener('click', () => {
       if (confirm(t('confirmReset'))) {
         localStorage.removeItem('gpa-calc-state');
         courseRowsEl.innerHTML = '';
-        $('#prevGPA').value = '';
-        $('#prevHours').value = '';
-        $('#targetGPA').value = '';
-        $('#remainHours').value = '';
+        $('#prevGPA').value = ''; $('#prevHours').value = ''; $('#targetGPA').value = ''; $('#remainHours').value = '';
         confettiTriggered = false;
         for (let i = 0; i < 3; i++) createCourseRow();
         recalcAll();
@@ -1162,7 +1231,68 @@
     });
 
     // ═══════════════════════════════════════════════
-    //  LOCAL STORAGE
+    //  SHARE & QR MODAL LOGIC
+    // ═══════════════════════════════════════════════
+    const shareModal = $('#shareModal');
+    const closeShareBtn = $('#closeShareModalBtn');
+    const shareCardBtn = $('#shareCardBtn');
+    const downloadShareCardBtn = $('#downloadShareCardBtn');
+    const copyShareLinkBtn = $('#copyShareLinkBtn');
+
+    function getShareURL(gpaVal) {
+      const u = new URL(window.location.href);
+      u.searchParams.set('gpa', gpaVal);
+      u.searchParams.set('lang', currentLang);
+      return u.toString();
+    }
+
+    shareCardBtn.addEventListener('click', () => {
+      const gpaVal = parseFloat($('#gpaValue').textContent) || 0.00;
+      const standing = classifyGPA(gpaVal);
+      $('#shareGPAVal').textContent = gpaVal.toFixed(2);
+      $('#shareClassVal').textContent = standing;
+
+      const qrData = encodeURIComponent(getShareURL(gpaVal.toFixed(2)));
+      $('#shareQRCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}`;
+      $('#copyLinkText').textContent = t('copyLink');
+      shareModal.classList.remove('hidden');
+    });
+
+    closeShareBtn.addEventListener('click', () => { shareModal.classList.add('hidden'); });
+    shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
+
+    downloadShareCardBtn.addEventListener('click', async () => {
+      const card = $('#shareCardPreview');
+      const originalText = downloadShareCardBtn.innerHTML;
+      downloadShareCardBtn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+      try {
+        const canvas = await html2canvas(card, { scale: 2, useCORS: true, backgroundColor: null, logging: false });
+        const link = document.createElement('a');
+        link.download = `GPA_Result_${$('#shareGPAVal').textContent}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (err) { console.error(err); }
+      downloadShareCardBtn.innerHTML = originalText;
+    });
+
+    copyShareLinkBtn.addEventListener('click', async () => {
+      const gpaVal = parseFloat($('#gpaValue').textContent) || 0.00;
+      const url = getShareURL(gpaVal.toFixed(2));
+      try {
+        await navigator.clipboard.writeText(url);
+        $('#copyLinkText').textContent = t('linkCopied');
+        setTimeout(() => { $('#copyLinkText').textContent = t('copyLink'); }, 2000);
+      } catch (err) {
+        const input = document.createElement('input');
+        input.value = url; document.body.appendChild(input); input.select();
+        document.execCommand('copy'); document.body.removeChild(input);
+        $('#copyLinkText').textContent = t('linkCopied');
+        setTimeout(() => { $('#copyLinkText').textContent = t('copyLink'); }, 2000);
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    //  LOCAL STORAGE STATE
     // ═══════════════════════════════════════════════
     const STORAGE_KEY = 'gpa-calc-state';
 
@@ -1182,16 +1312,14 @@
         });
         const state = {
           rows,
-          prevGPA: $('#prevGPA').value,
-          prevHours: $('#prevHours').value,
-          targetGPA: $('#targetGPA').value,
-          remainHours: $('#remainHours').value,
+          prevGPA: $('#prevGPA').value, prevHours: $('#prevHours').value,
+          targetGPA: $('#targetGPA').value, remainHours: $('#remainHours').value,
           cgpaOpen: !$('#cgpaPanel').classList.contains('hidden'),
           targetOpen: !$('#targetPanel').classList.contains('hidden'),
           lang: currentLang,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (e) { /* localStorage full or unavailable — silently ignore */ }
+      } catch (e) { }
     }
 
     function loadState() {
@@ -1219,7 +1347,6 @@
         if (state.targetOpen) { $('#targetPanel').classList.remove('hidden'); $('#targetChevron').style.transform = 'rotate(180deg)'; }
         isSaving = false; recalcAll();
       } catch (e) {
-        console.warn('Failed to load state, starting fresh:', e);
         localStorage.removeItem(STORAGE_KEY);
         for (let i = 0; i < 3; i++) createCourseRow();
         isSaving = false; recalcAll();
@@ -1302,7 +1429,6 @@
     populateGradeRef();
     loadState();
 
-    // Trigger reveal for already-visible elements
     setTimeout(() => { document.querySelectorAll('.reveal').forEach(el => { const rect = el.getBoundingClientRect(); if (rect.top < window.innerHeight) el.classList.add('visible'); }); }, 100);
   })();
   </script>
