@@ -632,11 +632,11 @@
         // Footer
         footer: 'Built with precision · GPA Calculator',
         // Classifications
-        classDeansList: "Dean's List",
-        classHonors: 'Honors',
-        classGoodStanding: 'Good Standing',
-        classProbation: 'Probation',
-        classAtRisk: 'At Risk',
+        classExcellent: 'Excellent',
+        classVeryGood: 'Very Good',
+        classGood: 'Good',
+        classPass: 'Pass',
+        classPoorFail: 'Poor / Fail',
         // Grade ref range helpers
         rangeAbove: (pct) => `${pct}% and above`,
         rangeLessThan: (pct) => `Less than ${pct}%`,
@@ -709,11 +709,11 @@
         // Footer
         footer: 'صُنعت بدقة · حاسبة المعدل',
         // Classifications
-        classDeansList: 'قائمة العميد',
-        classHonors: 'مرتبة الشرف',
-        classGoodStanding: 'مقبول',
-        classProbation: 'إنذار أكاديمي',
-        classAtRisk: 'معرّض للفصل',
+        classExcellent: 'امتياز',
+        classVeryGood: 'جيد جداً',
+        classGood: 'جيد',
+        classPass: 'مقبول',
+        classPoorFail: 'ضعيف / راسب',
         // Grade ref range helpers
         rangeAbove: (pct) => `${pct}% فما فوق`,
         rangeLessThan: (pct) => `أقل من ${pct}%`,
@@ -763,23 +763,23 @@
     //  GRADING SCHEMA
     // ═══════════════════════════════════════════════
     const GRADE_MAP = [
-      { grade: 'A+', min: 95, max: 100,   points: 4.00 },
-      { grade: 'A',  min: 90, max: 95,    points: 4.00 },
-      { grade: 'A-', min: 85, max: 90,    points: 3.70 },
-      { grade: 'B+', min: 80, max: 85,    points: 3.30 },
-      { grade: 'B',  min: 75, max: 80,    points: 3.00 },
-      { grade: 'B-', min: 71, max: 75,    points: 2.70 },
-      { grade: 'C+', min: 68, max: 71,    points: 2.30 },
-      { grade: 'C',  min: 65, max: 68,    points: 2.00 },
-      { grade: 'C-', min: 60, max: 65,    points: 1.70 },
-      { grade: 'D+', min: 55, max: 60,    points: 1.30 },
-      { grade: 'D',  min: 50, max: 55,    points: 1.00 },
-      { grade: 'F',  min: 0,  max: 50,    points: 0.00 },
+      { grade: 'A+', min: 97, max: 100,   points: 4.00 },
+      { grade: 'A',  min: 93, max: 97,    points: 4.00 },
+      { grade: 'A-', min: 89, max: 93,    points: 3.70 },
+      { grade: 'B+', min: 84, max: 89,    points: 3.30 },
+      { grade: 'B',  min: 80, max: 84,    points: 3.00 },
+      { grade: 'B-', min: 76, max: 80,    points: 2.70 },
+      { grade: 'C+', min: 73, max: 76,    points: 2.30 },
+      { grade: 'C',  min: 70, max: 73,    points: 2.00 },
+      { grade: 'C-', min: 67, max: 70,    points: 1.70 },
+      { grade: 'D+', min: 64, max: 67,    points: 1.30 },
+      { grade: 'D',  min: 60, max: 64,    points: 1.00 },
+      { grade: 'F',  min: 0,  max: 60,    points: 0.00 },
     ];
 
     /**
      * Look up quality points from a percentage score.
-     * Uses the half-open interval [min, max) with A+ being [95, 100].
+     * Uses the half-open interval [min, max) with A+ being [97, 100].
      */
     function pointsFromPercent(pct) {
       const p = parseFloat(pct);
@@ -798,11 +798,11 @@
 
     /** Classify GPA — returns a translation key */
     function classifyGPA(gpa) {
-      if (gpa >= 3.70) return t('classDeansList');
-      if (gpa >= 3.00) return t('classHonors');
-      if (gpa >= 2.00) return t('classGoodStanding');
-      if (gpa >= 1.00) return t('classProbation');
-      return t('classAtRisk');
+      if (gpa >= 3.60) return t('classExcellent');
+      if (gpa >= 3.00) return t('classVeryGood');
+      if (gpa >= 2.40) return t('classGood');
+      if (gpa >= 2.00) return t('classPass');
+      return t('classPoorFail');
     }
 
     // ═══════════════════════════════════════════════
